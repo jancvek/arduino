@@ -1,6 +1,7 @@
 #include <DS3231.h>
 #include <SPI.h>
 #include <Ethernet.h>
+#include <SD.h>
 
 struct dataStruct{
   int syncId;
@@ -18,10 +19,8 @@ int deviceId = 1;
 String serverIp = "192.168.0.101";
 //---------END--------
 
-
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
-
 
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
@@ -39,9 +38,19 @@ IPAddress ip(192, 168, 0, 113);
 // that you want to connect to (port 80 is default for HTTP):
 EthernetClient client;
 
-unsigned long lastConnectionTime = 0;             // last time you connected to the server, in milliseconds
-const unsigned long postingInterval = 10L * 1000L; // delay between updates, in milliseconds
+unsigned long timeAfterFirstCheck = 0;             // last time you connected to the server, in milliseconds
+const unsigned long timeInterval = 1L * 1000L; // delay between updates, in milliseconds
 // the "L" is needed to use long type numbers
+
+//-------------SD-----------------
+File myFile;
+String fileName = "data.txt";
+int sdNumberOfLines = 100;
+//------------END----------------
+
+//TMP: for testing
+int serverCalls = 0;
+//TMP: end
 
 void setup() {
   // put your setup code here, to run once:
@@ -51,33 +60,34 @@ void setup() {
 
   //--------ETHERNET SETUP-------------
   while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
+   ; // wait for serial port to connect. Needed for native USB port only
   }
 
+  Serial.print("SETUP: Ethernet initializing...");
   // start the Ethernet connection:
   if (Ethernet.begin(mac) == 0) {
-    Serial.println("Failed to configure Ethernet using DHCP");
+    Serial.println("SETUP FAILED: Ethernet not connected using DHCP");
     // try to congifure using IP address instead of DHCP:
     Ethernet.begin(mac, ip);
   }
   // give the Ethernet shield a second to initialize:
   delay(1000);
-  Serial.println("connecting...");
+  Serial.println("SETUP: Ethernet connecting...");
 
   // if you get a connection, report back via serial:
   
   if (client.connect(server, 80)) {
-    Serial.println("connected");
+    Serial.println("SETUP OK: Ethernet connected");
   } else {
     // if you didn't get a connection to the server:
-    Serial.println("connection failed");
+    Serial.println("SETUP FAILED: Ethernet connection failed");
   }
   //-----------END-----------
 
   //---------RTC SETUP-----------
   // Uncomment the next line if you are using an Arduino Leonardo
   //while (!Serial) {}
-  
+
   // Initialize the rtc object
   rtc.begin();  
   // The following lines can be uncommented to set the date and time
@@ -85,22 +95,33 @@ void setup() {
   //rtc.setTime(17, 29, 0);     // Set the time to 12:00:00 (24hr format)
   //rtc.setDate(26, 01, 2018);   // Set the date to January 1st, 2014
   //----------END-----------
+   
+  //---------SD SETUP---------
+  Serial.print("SETUP: SD Initializing...");
+
+  if (!SD.begin(4)) {
+    Serial.println("SETUP FAILED: SD initialization failed!");
+  }else{
+    Serial.println("SETUP OK: Initialization done.");
+
+    Serial.print("SETUP STATUS: Number of unsend data on SD: ");   
+    Serial.println(countDataOnSd());
+
+    //OPTION: to delete SD at start
+    /*
+    Serial.println("SETUP: Deleting SD card");
+    SD.remove(fileName);   
+    */
+  }
+  //----------END----------
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-   if (client.available()) {
-      char c = client.read();
-      Serial.write(c);
-    }
-
-  // if ten seconds have passed since your last connection,
-  // then connect again and send data:
-  if (millis() - lastConnectionTime > postingInterval) {
-
     //TODO: get data from RF
-    
+
+    Serial.println("RF: Get sensors data"); 
     //TMP: set syncId
     myData.syncId = 1;
     //device id
@@ -109,7 +130,11 @@ void loop() {
     myData.sensId = 1;
     //value
     myData.value = 22.50;
-  
+
+    Serial.print("OK RF: Sensors data: "); 
+    Serial.println(myData.value); 
+
+    Serial.println("RTC: Get date"); 
     //get datetime from RTC
     String rtcDate = rtc.getDateStr(FORMAT_LONG,FORMAT_BIGENDIAN,'-');
     String rtcTime = rtc.getTimeStr();
@@ -117,22 +142,111 @@ void loop() {
     String dateTime = rtcDate +"%20"+ rtcTime;
 
     myData.measureTime = dateTime; 
+    
+    Serial.print("OK RTC: ");
     Serial.println(myData.measureTime);  
     delay (10);
- 
-    if(!sentDataToServer(myData))
+
+    //bild POST body data
+    String postData = "syncId="+String(myData.syncId)+"&deviceId="+String(myData.deviceId)+"&sensId="+String(myData.sensId)+"&value="+String(myData.value)+"&measureTime="+myData.measureTime;
+
+    Serial.println("SERVER: Send data");
+   
+    if(!sentDataToServer(postData))
     {
-      //TODO: save data for later sending
-      Serial.println("Failed sending");
+      Serial.println("FAILED SERVER: Can not send data");
+      //Serial.println(postData);
+            
+      //save data for later sending
+      Serial.println("SD: Write data");
+      if(writeSdData(postData))
+      {
+        Serial.println("OK SD: Writting data");       
+      }
+      else
+      {
+        Serial.println("FAILED SD: Can not writting data");
+      }
     }
-  }
+    else
+    {     
+      Serial.println("OK SERVER: Data was send");
+      
+      //server is accessable...
+      //check if data on SD exist and sent them to server
+      String dataArr[sdNumberOfLines]; 
+
+      Serial.println("SD: Check for data");
+      
+      if(readSdData(dataArr))
+      {
+        Serial.println("OK SD! Data was read");
+        
+        //delete file after reading in case that some data are successfully saved and some not
+        //in next steps data which were not saved are saved on new file
+        SD.remove(fileName);     
+
+        Serial.println("SERVER: Sending data from SD...");
+
+        int numberOfFullLines = 0;
+        int numOfSendData = 0;
+        
+        for(int i = 0; i<sdNumberOfLines;i++)
+        {
+          if(dataArr[i] == ""){continue;}
+
+          numberOfFullLines++;          
+          String sentData = dataArr[i];
+          
+          if(!sentDataToServer(sentData))
+          { 
+            if(!writeSdData(sentData)){
+              Serial.println("FAILED SD: Can not write");
+              Serial.println("FATAL ERROR: Data lost. Data did not sent to server and not saved on SD");                     
+            }         
+          } else{
+            //Serial.println("SERVER OK: Data was sent to server");
+            numOfSendData++;
+          }
+        } 
+
+        if(numberOfFullLines == numOfSendData){
+          Serial.println ("SERVER OK: All data was send from SD"); 
+        }else{
+          Serial.print("SERVER: Not all data was sent to server. Num data: ");  
+          Serial.print(numberOfFullLines);   
+          Serial.print("sent data: "); 
+          Serial.println(numOfSendData);
+        }
+      }
+      else
+      {
+         Serial.println("SD: There is no data");
+      }      
+    }
+    
+    Serial.println("Delay 5000");
+    delay(5000);      
 }
 
-bool sentDataToServer(dataStruct myData)
-{
-  //bild POST body data
-  String postData = "syncId="+String(myData.syncId)+"&deviceId="+String(myData.deviceId)+"&sensId="+String(myData.sensId)+"&value="+String(myData.value)+"&measureTime="+myData.measureTime;
+//------------------------------FUNCTIONS-------------------------------------
 
+bool sentDataToServer(String postData)
+{
+  //TMP: for testing
+  /*
+  bool res;  
+  if(serverCalls == 0){res =  true;}
+  else if(serverCalls == 1){res = false;}
+  else if(serverCalls == 2){res = false;}
+  else if(serverCalls == 3){res = false;}
+  else if(serverCalls == 4){res = false;}
+  else if(serverCalls == 5){res = false;}
+  else if(serverCalls > 5){res = true;}
+  serverCalls++;  
+  return res;
+  */
+  
   // close any connection before send a new request.
   // This will free the socket on the WiFi shield
   client.stop();
@@ -153,14 +267,134 @@ bool sentDataToServer(dataStruct myData)
       client.print(postData);
       client.println();   
 
-      lastConnectionTime = millis();
-      // note the time that the connection was made:
-      
+      timeAfterFirstCheck = 0;
+
+      //check response
+      while(timeAfterFirstCheck < timeInterval){
+        if (client.available()) {
+        char c = client.read();
+          Serial.write(c);
+        }
+      }            
     } else {
       Serial.println("connection failed");
-      lastConnectionTime = millis();
+
       return false;
-    }
-    
+    }  
 }
 
+bool writeSdData (String dataLine)
+{
+  //check if file alread exist
+  if(SD.exists(fileName))
+  {
+    //TODO: write now line
+    myFile = SD.open(fileName, FILE_WRITE);
+
+    if (myFile) 
+    {
+      //TODO: chech if '\r\n' works and addopt this code
+      //edd character '|' at the end of the line (I have not tested '\r\n' jet)
+      dataLine = dataLine + "|";
+      
+      myFile.println(dataLine);
+      // close the file:
+      myFile.close();
+
+      return true;
+    } 
+    else 
+    {
+      // if the file didn't open, print an error:
+      Serial.print("ERROR SD: Can not open file: ");
+      Serial.println(fileName);
+
+      return false;
+    }
+  }
+  else
+  {
+    //create new folder
+    File dataFile = SD.open(fileName, FILE_WRITE);
+
+    // if the file is available, write to it:
+    if (dataFile) 
+    {
+      //TODO: chech if '\r\n' works and addopt this code
+      //edd character '|' at the end of the line (I have not tested '\r\n' jet)
+      dataLine = dataLine + "|";
+      
+      dataFile.println(dataLine);
+      // close the file:
+      dataFile.close();
+
+      return true;
+    }
+    // if the file isn't open, pop up an error:
+    else 
+    {
+      // if the file didn't open, print an error:
+      Serial.print("ERROR SD: Can not create file: ");
+      Serial.println(fileName);
+
+      return false;
+    }
+  }
+}
+
+bool readSdData (String *dataArr)
+{
+  int numOfLines = 0;
+  
+  //open the file for reading:
+  myFile = SD.open(fileName);
+  if (myFile) 
+  {
+    // read from the file until there's nothing else in it:
+    while (myFile.available()) {
+          
+      //TODO: chech if '\r\n' trigger
+
+      //read line on SD
+      String dataLine = myFile.readStringUntil('|');
+
+      dataArr[numOfLines] = dataLine;
+      numOfLines++;
+    }
+    // close the file:
+    myFile.close();
+
+    return true;
+  } 
+  else 
+  {
+    // if the file didn't open, print an error:
+    Serial.print("ERROR SD: Can open file: ");
+    Serial.println(fileName);
+
+    return false;
+  }
+}
+
+int countDataOnSd ()
+{
+  int numOfLines = 0;
+  
+  //open the file for reading:
+  myFile = SD.open(fileName);
+  if (myFile) 
+  {
+    // read from the file until there's nothing else in it:
+    while (myFile.available()) {
+          
+      //TODO: chech if '\r\n' trigger
+
+      //read line on SD
+      String dataLine = myFile.readStringUntil('|');
+      numOfLines++;
+    }
+    // close the file:
+    myFile.close();
+  } 
+  return numOfLines;
+}

@@ -1,7 +1,21 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <SPI.h>
+#include "RF24.h"
+
+struct dataStruct{
+  int deviceId;
+  int sensId;
+  float value;
+}myData;
 
 //----USER SETTINGS-----
+//unique device id
+int deviceIdNum = 1;
+
+//unique temperature sensor id
+int tempSensId = 1;
+
 //speed of serial port
 long serialSpeed = 115200;
 
@@ -10,6 +24,9 @@ int measureInterval = 3000;
 
 //pin number on which data wire of sensor is plugged on the Arduino
 #define ONE_WIRE_BUS 2
+
+//pins for RF24 (ce,csn)
+RF24 radio(7,8);
 
 //number of temperature sensors
 int numOfSens = 1;
@@ -58,7 +75,32 @@ void loop() {
   //TODO: convert them in the right data format
 
   //TODO: check JSON library to sent data
+
+  //create data struct
+  myData.deviceId = deviceIdNum;
+  myData.sensId = tempSensId;
+  myData.value = tempArr[0];
+  
+  //sent data
+  if(sendData(myData))
+  {
+    Serial.println(F("Send data: OK"));
+    //ledBlink(13,100,1);
+    delay(300000);
+  }else{
+    Serial.println(F("Send data: FAILED"));
+    delay(1000);
+  }
   
   //dalay
   delay(measureInterval);
+}
+
+bool sendData(dataStruct myData)
+{
+  if (radio.write(&myData,sizeof(myData))){ 
+    return true;
+  }else{
+    return false;
+  }
 }
