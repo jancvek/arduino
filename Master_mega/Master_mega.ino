@@ -2,7 +2,19 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include <SD.h>
+#include "nRF24L01.h"
+#include "RF24.h"
+#include "printf.h"
 
+//----!!!USER SETTINGS!!!-----
+//set device id
+int deviceId = 1;
+
+//set server ip
+String serverIp = "192.168.0.101";
+//---------END--------
+
+//-----DATA STRUCT-------
 struct dataStruct{
   int syncId;
   int deviceId;
@@ -11,13 +23,19 @@ struct dataStruct{
   String measureTime;
 }myData;
 
-//----USER SETTINGS-----
-//set device id
-int deviceId = 1;
+struct dataStruct{
+  int deviceId;
+  int sensId;
+  float value;
+}myRfData;
 
-//set server ip
-String serverIp = "192.168.0.101";
-//---------END--------
+//-----------NRF24----------------
+// Hardware configuration:
+RF24 radio(9,53);
+
+//set listen and read pipes up to 6 pipes
+const uint64_t pipesRX[1] = { 0xF0F0F0F0AA }; //0xF0F0F0F0AB, 0xF0F0F0F0AC, 0xF0F0F0F0AD, 0xF0F0F0F0AE, 0xF0F0F0F0AF
+const uint64_t pipesTX[1] = { 0xF0F0F0F0BA }; //0xF0F0F0F0BB, 0xF0F0F0F0BC, 0xF0F0F0F0BD, 0xF0F0F0F0BE, 0xF0F0F0F0BF
 
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
@@ -57,6 +75,14 @@ void setup() {
   
   // Setup Serial connection
   Serial.begin(115200);
+
+  //----------NRF24 SETUP-------------
+  radio.begin();
+  radio.setPALevel(RF24_PA_HIGH);
+  radio.openWritingPipe(pipesTX[0]);
+  radio.openReadingPipe(1,pipesRX[0]);
+  radio.startListening();                 
+  //-------------END-------------
 
   //--------ETHERNET SETUP-------------
   while (!Serial) {
@@ -117,116 +143,116 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
 
-    //TODO: get data from RF
-
-    Serial.println("RF: Get sensors data"); 
-    //TMP: set syncId
-    myData.syncId = 1;
-    //device id
-    myData.deviceId = deviceId;
-    //sens id
-    myData.sensId = 1;
-    //value
-    myData.value = 22.50;
-
-    Serial.print("OK RF: Sensors data: "); 
-    Serial.println(myData.value); 
-
-    Serial.println("RTC: Get date"); 
-    //get datetime from RTC
-    String rtcDate = rtc.getDateStr(FORMAT_LONG,FORMAT_BIGENDIAN,'-');
-    String rtcTime = rtc.getTimeStr();
-    rtcTime.replace(":","%3A");
-    String dateTime = rtcDate +"%20"+ rtcTime;
-
-    myData.measureTime = dateTime; 
-    
-    Serial.print("OK RTC: ");
-    Serial.println(myData.measureTime);  
-    delay (10);
-
-    //bild POST body data
-    String postData = "syncId="+String(myData.syncId)+"&deviceId="+String(myData.deviceId)+"&sensId="+String(myData.sensId)+"&value="+String(myData.value)+"&measureTime="+myData.measureTime;
-
-    Serial.println("SERVER: Send data");
-   
-    if(!sentDataToServer(postData))
+    //trigger when NRF24 data are available
+    byte pipeNo;                                     
+    while( radio.available(&pipeNo))
     {
-      Serial.println("FAILED SERVER: Can not send data");
-      //Serial.println(postData);
+      radio.read( &myRfData,sizeof(myRfData));
+    
+      Serial.println("RF: Get sensors data"); 
+      
+      myData.deviceId = myRfData.deviceId;
+      myData.sensId = myRfData.sensId;
+      myData.value = myRfData.value;
+      
+      //TMP: set syncId
+       myRfData.syncId = 1;
+
+      Serial.print("OK RF: Sensors data: "); 
+      Serial.println(myData.value); 
+
+      Serial.println("RTC: Geting date..."); 
+      //get datetime from RTC
+      String rtcDate = rtc.getDateStr(FORMAT_LONG,FORMAT_BIGENDIAN,'-');
+      String rtcTime = rtc.getTimeStr();
+      rtcTime.replace(":","%3A");
+      String dateTime = rtcDate +"%20"+ rtcTime;
+
+      myData.measureTime = dateTime; 
+    
+      Serial.print("OK RTC: ");
+      Serial.println(myData.measureTime);  
+      delay (10);
+
+      //bild POST body data
+      String postData = "syncId="+String(myData.syncId)+"&deviceId="+String(myData.deviceId)+"&sensId="+String(myData.sensId)+"&value="+String(myData.value)+"&measureTime="+myData.measureTime;
+
+      Serial.println("SERVER: Send data");
+   
+      if(!sentDataToServer(postData))
+      {
+        Serial.println("FAILED SERVER: Can not send data");
+        //Serial.println(postData);
             
-      //save data for later sending
-      Serial.println("SD: Write data");
-      if(writeSdData(postData))
-      {
-        Serial.println("OK SD: Writting data");       
-      }
-      else
-      {
-        Serial.println("FAILED SD: Can not writting data");
-      }
-    }
-    else
-    {     
-      Serial.println("OK SERVER: Data was send");
-      
-      //server is accessable...
-      //check if data on SD exist and sent them to server
-      String dataArr[sdNumberOfLines]; 
-
-      Serial.println("SD: Check for data");
-      
-      if(readSdData(dataArr))
-      {
-        Serial.println("OK SD! Data was read");
-        
-        //delete file after reading in case that some data are successfully saved and some not
-        //in next steps data which were not saved are saved on new file
-        SD.remove(fileName);     
-
-        Serial.println("SERVER: Sending data from SD...");
-
-        int numberOfFullLines = 0;
-        int numOfSendData = 0;
-        
-        for(int i = 0; i<sdNumberOfLines;i++)
+        //save data for later sending
+        Serial.println("SD: Write data");
+        if(writeSdData(postData))
         {
-          if(dataArr[i] == ""){continue;}
-
-          numberOfFullLines++;          
-          String sentData = dataArr[i];
-          
-          if(!sentDataToServer(sentData))
-          { 
-            if(!writeSdData(sentData)){
-              Serial.println("FAILED SD: Can not write");
-              Serial.println("FATAL ERROR: Data lost. Data did not sent to server and not saved on SD");                     
-            }         
-          } else{
-            //Serial.println("SERVER OK: Data was sent to server");
-            numOfSendData++;
-          }
-        } 
-
-        if(numberOfFullLines == numOfSendData){
-          Serial.println ("SERVER OK: All data was send from SD"); 
-        }else{
-          Serial.print("SERVER: Not all data was sent to server. Num data: ");  
-          Serial.print(numberOfFullLines);   
-          Serial.print("sent data: "); 
-          Serial.println(numOfSendData);
+          Serial.println("OK SD: Writting data");       
+        }
+        else
+        {
+          Serial.println("FAILED SD: Can not writting data");
         }
       }
       else
-      {
-         Serial.println("SD: There is no data");
-      }      
-    }
-    
-    Serial.println("Delay 5000");
-    delay(5000);      
+      {     
+        Serial.println("OK SERVER: Data was send");
+        
+        //server is accessable...
+        //check if data on SD exist and sent them to server
+        String dataArr[sdNumberOfLines]; 
+  
+        Serial.println("SD: Check for data");
+        
+        if(readSdData(dataArr))
+        {
+          Serial.println("OK SD! Data was read");
+          
+          //delete file after reading in case that some data are successfully saved and some not
+          //in next steps data which were not saved are saved on new file
+          SD.remove(fileName);     
+  
+          Serial.println("SERVER: Sending data from SD...");
+  
+          int numberOfFullLines = 0;
+          int numOfSendData = 0;
+          
+          for(int i = 0; i<sdNumberOfLines;i++)
+          {
+            if(dataArr[i] == ""){continue;}
+  
+            numberOfFullLines++;          
+            String sentData = dataArr[i];
+            
+            if(!sentDataToServer(sentData))
+            { 
+              if(!writeSdData(sentData)){
+                Serial.println("FAILED SD: Can not write");
+                Serial.println("FATAL ERROR: Data lost. Data did not sent to server and not saved on SD");                     
+              }         
+            } else{
+              //Serial.println("SERVER OK: Data was sent to server");
+              numOfSendData++;
+            }
+          } 
+  
+          if(numberOfFullLines == numOfSendData){
+            Serial.println ("SERVER OK: All data was send from SD"); 
+          }else{
+            Serial.print("SERVER: Not all data was sent to server. Num data: ");  
+            Serial.print(numberOfFullLines);   
+            Serial.print("sent data: "); 
+            Serial.println(numOfSendData);
+          }
+        }
+        else
+        {
+           Serial.println("SD: There is no data");
+        }      
+      }
+   }     
 }
 
 //------------------------------FUNCTIONS-------------------------------------
