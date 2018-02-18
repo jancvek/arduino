@@ -13,7 +13,7 @@ int deviceIdNum = 1;
 int tempSensId = 1;
 
 //interval time to measure in mili second
-int measureInterval = 3000;
+int measureInterval = 3000000;
 
 //pin number on which data wire of sensor is plugged on the Arduino
 #define ONE_WIRE_BUS 2
@@ -51,12 +51,20 @@ void setup() {
 
   Serial.begin(115200);
   Serial.println(F("Arduino Nano TX Library"));
-
+ 
   //-------NRF24 SETUP-------
   radio.begin();
   radio.setPALevel(RF24_PA_HIGH);
   radio.openWritingPipe(pipesTX[0]);
   radio.openReadingPipe(1,pipesRX[0]);
+
+  //check if Master is accessable
+  char test = 'a';
+  if (radio.write(&test,sizeof(test))){ 
+    Serial.println("RF TEST OK: Connected with master");
+  }else{
+    Serial.println("RF TEST FAILED: Can not connect to master");
+  }
   //----------END------------
   sensors.begin();
   sensors.getAddress(myThermometer [0], 0);

@@ -15,7 +15,7 @@ String serverIp = "192.168.0.101";
 //---------END--------
 
 //-----DATA STRUCT-------
-struct dataStruct{
+struct dataStruct1{
   int syncId;
   int deviceId;
   int sensId;
@@ -23,7 +23,7 @@ struct dataStruct{
   String measureTime;
 }myData;
 
-struct dataStruct{
+struct dataStruct2{
   int deviceId;
   int sensId;
   float value;
@@ -155,9 +155,16 @@ void loop() {
       myData.deviceId = myRfData.deviceId;
       myData.sensId = myRfData.sensId;
       myData.value = myRfData.value;
+
+      //check if is device Id or sens id is 0 then skip
+      if(myData.deviceId == 0 || myData.deviceId == 0)
+      {
+        Serial.print("RF FAILED: device id or sens id is 0"); 
+        break;
+      }
       
       //TMP: set syncId
-       myRfData.syncId = 1;
+       myData.syncId = 1;
 
       Serial.print("OK RF: Sensors data: "); 
       Serial.println(myData.value); 
