@@ -1,3 +1,18 @@
+/*
+ CODE FOR ARDUINO NANO AS SLAVE 
+
+  NRF24 PINS:
+  D9 - CE
+  D10 -CSN
+  D13 -SCK
+  D11 - MO
+  D12 - MI
+
+  DS18B20 PINS:
+  VCC - 3.3V
+  D2 - DATA (between DATA line and VCC need to be resistor 4.7kOhm)
+*/
+
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <SPI.h>
@@ -35,10 +50,10 @@ struct dataStruct{
 
 //-------NRF24-------
 //pins for RF24 (ce,csn)
-RF24 radio(7,8);
+RF24 radio(9,10);
 
-const uint64_t pipesRX[1] = { 0xF0F0F0F0BA };
-const uint64_t pipesTX[1] = { 0xF0F0F0F0AA };
+//const uint64_t pipesRX[1] = { 0xF0F0F0F0BA }; NOT IN USE YET
+const uint64_t pipesTX[1] = { 0xF0F0F0F0A1 };
 //-------END--------
 
 // Setup a oneWire instance to communicate with any OneWire devices  
@@ -55,17 +70,29 @@ void setup() {
   //-------NRF24 SETUP-------
   radio.begin();
   radio.setPALevel(RF24_PA_HIGH);
-  radio.openWritingPipe(pipesTX[0]);
-  radio.openReadingPipe(1,pipesRX[0]);
+  radio.openReadingPipe(1,pipesTX[0]);
 
+  
   //check if Master is accessable
-  char test = 'a';
-  if (radio.write(&test,sizeof(test))){ 
-    Serial.println("RF TEST OK: Connected with master");
-  }else{
-    Serial.println("RF TEST FAILED: Can not connect to master");
+  int i = 0;
+  bool rfConn = false;
+
+  myData.deviceId = 0;
+  myData.sensId = 0;
+  myData.value = 999;
+
+  while(!rfConn)
+  {  
+    if (radio.write(&myData,sizeof(myData))){ 
+      Serial.println("RF TEST OK: Connected with master");
+      rfConn = true;
+    }else{
+      Serial.println("RF TEST FAILED: Can not connect to master");
+    }
+    delay(1000);
   }
   //----------END------------
+  
   sensors.begin();
   sensors.getAddress(myThermometer [0], 0);
 }

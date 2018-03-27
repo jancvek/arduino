@@ -1,10 +1,36 @@
+/*
+ CODE FOR ARDUINO MEGA AS MASTER 
+
+  NRF24 PINS:
+  VCC - 5V/3.3V (5V - with VCC module)
+  D3 - CE
+  D30 -CSN
+  D7 - MI
+  D6 - MO
+  D5 - SCK
+
+  RTC PINS:
+  VCC - 5V/3.3V (better use 3.3V to not over charge the battery)
+  SDA -SDA
+  SCL - SCL
+
+  ETHERNET USE PINS:
+  ICPS/52,51,50 (10SS)
+
+  SD CARD USE PINS:
+  ICPS/52,51,50 (4SS)
+*/
+
 #include <DS3231.h>
 #include <SPI.h>
 #include <Ethernet.h>
-#include <SD.h>
+#include <SdFat.h>
 #include "nRF24L01.h"
 #include "RF24.h"
 #include "printf.h"
+#include "DigitalIO.h"
+
+SdFat SD;
 
 //----!!!USER SETTINGS!!!-----
 //set device id
@@ -31,11 +57,11 @@ struct dataStruct2{
 
 //-----------NRF24----------------
 // Hardware configuration:
-RF24 radio(9,53);
+RF24 radio(3,30);
 
 //set listen and read pipes up to 6 pipes
-const uint64_t pipesRX[1] = { 0xF0F0F0F0AA }; //0xF0F0F0F0AB, 0xF0F0F0F0AC, 0xF0F0F0F0AD, 0xF0F0F0F0AE, 0xF0F0F0F0AF
-const uint64_t pipesTX[1] = { 0xF0F0F0F0BA }; //0xF0F0F0F0BB, 0xF0F0F0F0BC, 0xF0F0F0F0BD, 0xF0F0F0F0BE, 0xF0F0F0F0BF
+const uint64_t pipesRX[1] = { 0xF0F0F0F0A1 }; 
+//const uint64_t pipesTX[1] = { 0xF0F0F0F0BA }; NOT IN USE YET
 
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
@@ -74,12 +100,15 @@ void setup() {
   // put your setup code here, to run once:
   
   // Setup Serial connection
-  Serial.begin(115200);
+  Serial.begin(115200); 
 
   //----------NRF24 SETUP-------------
+  //only for MEGA we need to set 53 as output!
+  //we need also do that if we not using 53 pin as SS
+  pinMode(53,OUTPUT);
   radio.begin();
   radio.setPALevel(RF24_PA_HIGH);
-  radio.openWritingPipe(pipesTX[0]);
+  //radio.openWritingPipe(pipesTX[0]);
   radio.openReadingPipe(1,pipesRX[0]);
   radio.startListening();                 
   //-------------END-------------
@@ -89,7 +118,7 @@ void setup() {
    ; // wait for serial port to connect. Needed for native USB port only
   }
 
-  Serial.print("SETUP: Ethernet initializing...");
+  Serial.println("SETUP: Ethernet initializing...");
   // start the Ethernet connection:
   if (Ethernet.begin(mac) == 0) {
     Serial.println("SETUP FAILED: Ethernet not connected using DHCP");
@@ -120,17 +149,20 @@ void setup() {
   //rtc.setDOW(FRIDAY);     // Set Day-of-Week to SUNDAY
   //rtc.setTime(17, 29, 0);     // Set the time to 12:00:00 (24hr format)
   //rtc.setDate(26, 01, 2018);   // Set the date to January 1st, 2014
+  Serial.print("SETUP OK RTC: current time = ");
+  Serial.print(rtc.getDateStr(FORMAT_LONG,FORMAT_BIGENDIAN,'-'));
+  Serial.println(rtc.getTimeStr());
   //----------END-----------
    
   //---------SD SETUP---------
-  Serial.print("SETUP: SD Initializing...");
+  Serial.println("SETUP: SD Initializing...");
 
   if (!SD.begin(4)) {
-    Serial.println("SETUP FAILED: SD initialization failed!");
+    Serial.println("SETUP FAILED SD: initialization failed!");
   }else{
-    Serial.println("SETUP OK: Initialization done.");
+    Serial.println("SETUP OK SD: initialization done.");
 
-    Serial.print("SETUP STATUS: Number of unsend data on SD: ");   
+    Serial.print("SETUP STATUS SD: Number of unsend data on SD: ");   
     Serial.println(countDataOnSd());
 
     //OPTION: to delete SD at start
@@ -140,17 +172,20 @@ void setup() {
     */
   }
   //----------END----------
+
+  Serial.println("--------------SETUP ENDED---------------");  
+  Serial.println("RF: Start listening...");
 }
 
 void loop() {
-
+  
     //trigger when NRF24 data are available
     byte pipeNo;                                     
     while( radio.available(&pipeNo))
     {
-      radio.read( &myRfData,sizeof(myRfData));
-    
       Serial.println("RF: Get sensors data"); 
+      
+      radio.read( &myRfData,sizeof(myRfData));
       
       myData.deviceId = myRfData.deviceId;
       myData.sensId = myRfData.sensId;
@@ -219,7 +254,7 @@ void loop() {
           
           //delete file after reading in case that some data are successfully saved and some not
           //in next steps data which were not saved are saved on new file
-          SD.remove(fileName);     
+          //TMP SD.remove(fileName);     
   
           Serial.println("SERVER: Sending data from SD...");
   
