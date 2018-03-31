@@ -81,8 +81,9 @@ void setup() {
   myData.sensId = 0;
   myData.value = 999;
 
+  Serial.println("SETUP RF: Connecting with master...");
   while(!rfConn)
-  {  
+  {      
     if (radio.write(&myData,sizeof(myData))){ 
       Serial.println("RF TEST OK: Connected with master");
       rfConn = true;

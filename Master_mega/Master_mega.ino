@@ -1,6 +1,14 @@
 /*
  CODE FOR ARDUINO MEGA AS MASTER 
-
+  IMPORTANT: arduino mega use SOFT SPI due to using Ethernet shield on 
+  hardware SPI 50, 51, 52, 53 (which are directly connected with ICSP). Library NRF24 
+  have already implemented SOFT SPI but it is disabled by default. To enable SOFT SPI 
+  uncomment #define SOFTSPI in NRF24_config.h file. Second include DigitalIO.h lib in 
+  the code. Also is needed defined new SOFT SPI in NRF24_config.h file on digital pins: 5,6,7.
+  
+  This version of code do not have implemented SD functionality due to uncompatibility 
+  between DigitalIO and SD library
+  
   NRF24 PINS:
   VCC - 5V/3.3V (5V - with VCC module)
   D3 - CE
@@ -24,13 +32,10 @@
 #include <DS3231.h>
 #include <SPI.h>
 #include <Ethernet.h>
-#include <SdFat.h>
 #include "nRF24L01.h"
 #include "RF24.h"
 #include "printf.h"
 #include "DigitalIO.h"
-
-SdFat SD;
 
 //----!!!USER SETTINGS!!!-----
 //set device id
@@ -60,7 +65,7 @@ struct dataStruct2{
 RF24 radio(3,30);
 
 //set listen and read pipes up to 6 pipes
-const uint64_t pipesRX[1] = { 0xF0F0F0F0A1 }; 
+const uint64_t pipesRX[1] = { 0xF0F0F0F0AA }; 
 //const uint64_t pipesTX[1] = { 0xF0F0F0F0BA }; NOT IN USE YET
 
 // Init the DS3231 using the hardware interface
@@ -85,12 +90,6 @@ EthernetClient client;
 unsigned long timeAfterFirstCheck = 0;             // last time you connected to the server, in milliseconds
 const unsigned long timeInterval = 1L * 1000L; // delay between updates, in milliseconds
 // the "L" is needed to use long type numbers
-
-//-------------SD-----------------
-File myFile;
-String fileName = "data.txt";
-int sdNumberOfLines = 100;
-//------------END----------------
 
 //TMP: for testing
 int serverCalls = 0;
@@ -154,24 +153,6 @@ void setup() {
   Serial.println(rtc.getTimeStr());
   //----------END-----------
    
-  //---------SD SETUP---------
-  Serial.println("SETUP: SD Initializing...");
-
-  if (!SD.begin(4)) {
-    Serial.println("SETUP FAILED SD: initialization failed!");
-  }else{
-    Serial.println("SETUP OK SD: initialization done.");
-
-    Serial.print("SETUP STATUS SD: Number of unsend data on SD: ");   
-    Serial.println(countDataOnSd());
-
-    //OPTION: to delete SD at start
-    /*
-    Serial.println("SETUP: Deleting SD card");
-    SD.remove(fileName);   
-    */
-  }
-  //----------END----------
 
   Serial.println("--------------SETUP ENDED---------------");  
   Serial.println("RF: Start listening...");
@@ -226,73 +207,10 @@ void loop() {
       {
         Serial.println("FAILED SERVER: Can not send data");
         //Serial.println(postData);
-            
-        //save data for later sending
-        Serial.println("SD: Write data");
-        if(writeSdData(postData))
-        {
-          Serial.println("OK SD: Writting data");       
-        }
-        else
-        {
-          Serial.println("FAILED SD: Can not writting data");
-        }
       }
       else
       {     
         Serial.println("OK SERVER: Data was send");
-        
-        //server is accessable...
-        //check if data on SD exist and sent them to server
-        String dataArr[sdNumberOfLines]; 
-  
-        Serial.println("SD: Check for data");
-        
-        if(readSdData(dataArr))
-        {
-          Serial.println("OK SD! Data was read");
-          
-          //delete file after reading in case that some data are successfully saved and some not
-          //in next steps data which were not saved are saved on new file
-          //TMP SD.remove(fileName);     
-  
-          Serial.println("SERVER: Sending data from SD...");
-  
-          int numberOfFullLines = 0;
-          int numOfSendData = 0;
-          
-          for(int i = 0; i<sdNumberOfLines;i++)
-          {
-            if(dataArr[i] == ""){continue;}
-  
-            numberOfFullLines++;          
-            String sentData = dataArr[i];
-            
-            if(!sentDataToServer(sentData))
-            { 
-              if(!writeSdData(sentData)){
-                Serial.println("FAILED SD: Can not write");
-                Serial.println("FATAL ERROR: Data lost. Data did not sent to server and not saved on SD");                     
-              }         
-            } else{
-              //Serial.println("SERVER OK: Data was sent to server");
-              numOfSendData++;
-            }
-          } 
-  
-          if(numberOfFullLines == numOfSendData){
-            Serial.println ("SERVER OK: All data was send from SD"); 
-          }else{
-            Serial.print("SERVER: Not all data was sent to server. Num data: ");  
-            Serial.print(numberOfFullLines);   
-            Serial.print("sent data: "); 
-            Serial.println(numOfSendData);
-          }
-        }
-        else
-        {
-           Serial.println("SD: There is no data");
-        }      
       }
    }     
 }
@@ -300,21 +218,7 @@ void loop() {
 //------------------------------FUNCTIONS-------------------------------------
 
 bool sentDataToServer(String postData)
-{
-  //TMP: for testing
-  /*
-  bool res;  
-  if(serverCalls == 0){res =  true;}
-  else if(serverCalls == 1){res = false;}
-  else if(serverCalls == 2){res = false;}
-  else if(serverCalls == 3){res = false;}
-  else if(serverCalls == 4){res = false;}
-  else if(serverCalls == 5){res = false;}
-  else if(serverCalls > 5){res = true;}
-  serverCalls++;  
-  return res;
-  */
-  
+{ 
   // close any connection before send a new request.
   // This will free the socket on the WiFi shield
   client.stop();
@@ -349,120 +253,4 @@ bool sentDataToServer(String postData)
 
       return false;
     }  
-}
-
-bool writeSdData (String dataLine)
-{
-  //check if file alread exist
-  if(SD.exists(fileName))
-  {
-    //TODO: write now line
-    myFile = SD.open(fileName, FILE_WRITE);
-
-    if (myFile) 
-    {
-      //TODO: chech if '\r\n' works and addopt this code
-      //edd character '|' at the end of the line (I have not tested '\r\n' jet)
-      dataLine = dataLine + "|";
-      
-      myFile.println(dataLine);
-      // close the file:
-      myFile.close();
-
-      return true;
-    } 
-    else 
-    {
-      // if the file didn't open, print an error:
-      Serial.print("ERROR SD: Can not open file: ");
-      Serial.println(fileName);
-
-      return false;
-    }
-  }
-  else
-  {
-    //create new folder
-    File dataFile = SD.open(fileName, FILE_WRITE);
-
-    // if the file is available, write to it:
-    if (dataFile) 
-    {
-      //TODO: chech if '\r\n' works and addopt this code
-      //edd character '|' at the end of the line (I have not tested '\r\n' jet)
-      dataLine = dataLine + "|";
-      
-      dataFile.println(dataLine);
-      // close the file:
-      dataFile.close();
-
-      return true;
-    }
-    // if the file isn't open, pop up an error:
-    else 
-    {
-      // if the file didn't open, print an error:
-      Serial.print("ERROR SD: Can not create file: ");
-      Serial.println(fileName);
-
-      return false;
-    }
-  }
-}
-
-bool readSdData (String *dataArr)
-{
-  int numOfLines = 0;
-  
-  //open the file for reading:
-  myFile = SD.open(fileName);
-  if (myFile) 
-  {
-    // read from the file until there's nothing else in it:
-    while (myFile.available()) {
-          
-      //TODO: chech if '\r\n' trigger
-
-      //read line on SD
-      String dataLine = myFile.readStringUntil('|');
-
-      dataArr[numOfLines] = dataLine;
-      numOfLines++;
-    }
-    // close the file:
-    myFile.close();
-
-    return true;
-  } 
-  else 
-  {
-    // if the file didn't open, print an error:
-    Serial.print("ERROR SD: Can open file: ");
-    Serial.println(fileName);
-
-    return false;
-  }
-}
-
-int countDataOnSd ()
-{
-  int numOfLines = 0;
-  
-  //open the file for reading:
-  myFile = SD.open(fileName);
-  if (myFile) 
-  {
-    // read from the file until there's nothing else in it:
-    while (myFile.available()) {
-          
-      //TODO: chech if '\r\n' trigger
-
-      //read line on SD
-      String dataLine = myFile.readStringUntil('|');
-      numOfLines++;
-    }
-    // close the file:
-    myFile.close();
-  } 
-  return numOfLines;
 }
