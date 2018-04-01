@@ -27,6 +27,10 @@
 
   SD CARD USE PINS:
   ICPS/52,51,50 (4SS)
+
+  EXTERNAL LED
+  D22 - VCC
+  GND - GND
 */
 
 #include <DS3231.h>
@@ -60,6 +64,13 @@ struct dataStruct2{
   float value;
 }myRfData;
 
+//------------LCD-------------
+const int ledPin =  24;           // the number of the LED pin
+int ledState = LOW;               // ledState used to set the LED
+unsigned long previousMillis = 0; // will store last time LED was updated
+const long interval = 1000;       // interval at which to blink (milliseconds)
+//------------END------------
+
 //-----------NRF24----------------
 // Hardware configuration:
 RF24 radio(3,30);
@@ -80,7 +91,7 @@ IPAddress server(192,168,0,101);  // numeric IP for Google (no DNS)
 //char server[] = "www.google.com";    // name address for Google (using DNS)
 
 // Set the static IP address to use if the DHCP fails to assign
-IPAddress ip(192, 168, 0, 113);
+IPAddress ip(192, 168, 0, 90);
 
 // Initialize the Ethernet client library
 // with the IP address and port of the server
@@ -101,6 +112,10 @@ void setup() {
   // Setup Serial connection
   Serial.begin(115200); 
 
+  //-----------LED SETUP------------
+  pinMode(ledPin, OUTPUT); 
+  //-------------END--------------
+  
   //----------NRF24 SETUP-------------
   //only for MEGA we need to set 53 as output!
   //we need also do that if we not using 53 pin as SS
@@ -113,6 +128,8 @@ void setup() {
   //-------------END-------------
 
   //--------ETHERNET SETUP-------------
+  digitalWrite(ledPin, HIGH);
+  
   while (!Serial) {
    ; // wait for serial port to connect. Needed for native USB port only
   }
@@ -121,21 +138,38 @@ void setup() {
   // start the Ethernet connection:
   if (Ethernet.begin(mac) == 0) {
     Serial.println("SETUP FAILED: Ethernet not connected using DHCP");
-    // try to congifure using IP address instead of DHCP:
-    Ethernet.begin(mac, ip);
+    // try to congifure using IP address instead of DHCP: (NEVER WORKS!!!)
+    //Ethernet.begin(mac, ip);
+    digitalWrite(ledPin, LOW);
+    ledBlink(2,1000);
   }
-  // give the Ethernet shield a second to initialize:
-  delay(1000);
-  Serial.println("SETUP: Ethernet connecting...");
+  else
+  {
+    Serial.print("SETUP OK: Ethernet connected with IP: ");
+    Serial.println(Ethernet.localIP());
+    digitalWrite(ledPin, LOW);
+    ledBlink(3,200);
+  }
+  // give the Ethernet shield a second to initialize: (NOT NEED BECOUSE LED TIME!)
+  //delay(1000);
 
+  ledBlink(1,2000);
+  
+  Serial.println("SETUP: Ethernet connecting...");
+  
   // if you get a connection, report back via serial:
   
   if (client.connect(server, 80)) {
     Serial.println("SETUP OK: Ethernet connected");
+    ledBlink(3,200);
+    
   } else {
     // if you didn't get a connection to the server:
     Serial.println("SETUP FAILED: Ethernet connection failed");
+    ledBlink(2,1000);
   }
+
+  
   //-----------END-----------
 
   //---------RTC SETUP-----------
@@ -203,14 +237,13 @@ void loop() {
 
       Serial.println("SERVER: Send data");
    
-      if(!sentDataToServer(postData))
+      if(sentDataToServer(postData))
       {
-        Serial.println("FAILED SERVER: Can not send data");
-        //Serial.println(postData);
+        Serial.println("OK SERVER: Data was send");
       }
       else
       {     
-        Serial.println("OK SERVER: Data was send");
+        Serial.println("FAILED SERVER: Can not send data");
       }
    }     
 }
@@ -239,14 +272,24 @@ bool sentDataToServer(String postData)
       client.print(postData);
       client.println();   
 
-      timeAfterFirstCheck = 0;
-
-      //check response
-      while(timeAfterFirstCheck < timeInterval){
+      unsigned long time = millis();
+      bool getReponse = false;
+      while(millis()-time < timeInterval){
+        
         if (client.available()) {
-        char c = client.read();
+          char c = client.read();
           Serial.write(c);
+          getReponse = true;
         }
+      }
+      
+      if(getReponse)
+      {
+        return true;            
+      }
+      else
+      {
+        return false;
       }            
     } else {
       Serial.println("connection failed");
@@ -254,3 +297,17 @@ bool sentDataToServer(String postData)
       return false;
     }  
 }
+
+void ledBlink (int numOfBlinks, int blinkLen)
+{
+  for(int i = 0;i<numOfBlinks;i++)
+  {
+    digitalWrite(ledPin, HIGH);
+    delay(blinkLen);
+    digitalWrite(ledPin, LOW);
+
+
+    delay(blinkLen);
+  }
+}
+
