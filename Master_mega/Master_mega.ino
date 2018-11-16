@@ -155,17 +155,17 @@ void setup() {
 
   ledBlink(1,2000);
   
-  Serial.println("SETUP: Ethernet connecting...");
+  Serial.println("SETUP: Ethernet connecting to server...");
   
   // if you get a connection, report back via serial:
   
-  if (client.connect(server, 80)) {
-    Serial.println("SETUP OK: Ethernet connected");
-    ledBlink(3,200);
-    
+  if (client.connect(server, 80 )== 1) {
+    Serial.println("SETUP OK: Ethernet connected to server");
+    client.stop();
+    ledBlink(3,200);    
   } else {
     // if you didn't get a connection to the server:
-    Serial.println("SETUP FAILED: Ethernet connection failed");
+    Serial.println("SETUP FAILED: Ethernet can not connect to server");
     ledBlink(2,1000);
   }
 
@@ -245,6 +245,9 @@ void loop() {
       {     
         Serial.println("FAILED SERVER: Can not send data");
       }
+      
+      //TMP:
+      Serial.println("TMP: 3");
    }     
 }
 
@@ -252,36 +255,52 @@ void loop() {
 
 bool sentDataToServer(String postData)
 { 
-  // close any connection before send a new request.
-  // This will free the socket on the WiFi shield
-  client.stop();
   
-  if (client.connect(server, 80)) {
+  if (client.connect(server, 80) == 1) {
       Serial.println("connected!");
-     
+
+      //TMP:
+      Serial.print("TMP: 0 FREE RAM: ");
+      Serial.println(freeRam());
+      
       //store_sensors_data.php
       // Make a HTTP request:
+      
       client.println("POST /main/store_sensors_data.php HTTP/1.1");
       client.print("Host: ");
       client.println(serverIp);   
+      client.println("Connection: close");
       client.print("Content-Length: ");
-      client.println(postData.length());
-      client.println("Cache-Control: no-cache");
+      client.println(postData.length());      
       client.println("Content-Type: application/x-www-form-urlencoded");
+      client.println("Cache-Control: no-cache");
       client.println();
-      client.print(postData);
-      client.println();   
-
-      unsigned long time = millis();
+      client.println(postData);  
+      
+      
+      //TMP:
+      Serial.println("TMP: 1");
+      
       bool getReponse = false;
-      while(millis()-time < timeInterval){
+
+      delay(200);
+      //problems with while...
+      //unsigned long startTime = millis();
+      //while(millis()-startTime < timeInterval){
         
         if (client.available()) {
           char c = client.read();
           Serial.write(c);
           getReponse = true;
         }
-      }
+      //}
+      
+      //TMP:
+      Serial.println("TMP: 2");
+
+      // close any connection before send a new request.
+      // This will free the socket on the WiFi shield
+      client.stop();
       
       if(getReponse)
       {
@@ -292,8 +311,8 @@ bool sentDataToServer(String postData)
         return false;
       }            
     } else {
-      Serial.println("connection failed");
-
+      Serial.println("Ethernet connection FAILED!");
+     
       return false;
     }  
 }
@@ -305,9 +324,13 @@ void ledBlink (int numOfBlinks, int blinkLen)
     digitalWrite(ledPin, HIGH);
     delay(blinkLen);
     digitalWrite(ledPin, LOW);
-
-
     delay(blinkLen);
   }
+}
+
+int freeRam () {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
 
