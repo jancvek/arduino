@@ -1,35 +1,40 @@
 /*
- * ESP8266 LoLin V3 modul has bilt in LED on PIN 2
+ CODE FOR ESP8266 LoLin V3 modul WITH TEMP AND HUMIDITY SENSOR
+
+ NOTES:
+ modul has bilt in LED on PIN 2
+
+ SENSOR GY-213V-HTU21D PINS:
+ V3.3 - VCC
+ G - GND
+ D1 - SCL
+ D2 - SDA
  */
-
-
-/* 
-**  Connect the ESP8266 unit to an existing WiFi access point
-**  For more information see http://42bots.com
-*/
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include "Adafruit_Si7021.h"
 
-Adafruit_Si7021 sensor = Adafruit_Si7021();
-
-//--------------SETTINGS-----------------
-
+//-----!!!USER SETTINGS!!!--------
+//set modul id
 String moduleId = "2";
 
+//set default delay
 int defaultDelay = 300000;
 
-// Replace these with your WiFi network settings
-const char* ssid = "Doma 3"; //replace this with your WiFi network name
-const char* password = "a1250283"; //replace this with your WiFi network password
+//set WIFI variables
+const char* ssid = "Doma 3";
+const char* password = "a1250283";
+//------------END--------------
 
-//--------------END-----------------
+//sensor constructor
+Adafruit_Si7021 sensor = Adafruit_Si7021();
 
 const int ledPin =  2;  
 
 void setup()
 {
+  //set serial conn and led pin
   Serial.begin(115200);
   pinMode(ledPin, OUTPUT);
 
@@ -42,11 +47,14 @@ void setup()
       ledBlink(1, 50, 50);
     }
   }
-  
+
+  //connect to WIFI
   WiFi.begin(ssid, password);
 
+  //wait a little to WIFI begin
   delay(500);
-  
+
+  //wait untill WIFI is not connected
   while (WiFi.status() != WL_CONNECTED)
   {
     ledBlink(3, 100, 100);
@@ -60,11 +68,14 @@ void setup()
   //blink for successful wifi conection
   ledBlink(3, 500, 200);
 
-  //TODO: check connection on raspberry pi
+  //check connection on raspberry pi
   String httpReq = "http://192.168.0.101:8000/checkConn/?test=%2799.9%27";
 
+  //send http request
   String response = sendHttpReq(httpReq);
 
+  delay(100);
+  
   if(response.indexOf("OK") > -1)
   {
      //blink for successful respberry pi conection
@@ -76,8 +87,8 @@ void setup()
 }
 
 void loop() {
-  
-  if (WiFi.status() == WL_CONNECTED) //Check WiFi connection status
+  //Check WiFi connection status
+  if (WiFi.status() == WL_CONNECTED) 
   { 
     //read sensor
     float temp = sensor.readTemperature();
