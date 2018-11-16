@@ -100,8 +100,14 @@ void setup()
     Serial.print("Server response: ");
     Serial.println(response);
   }
-  
-    //in case of to low delay
+
+  float delayInMicroS = defaultDelay*1e3;
+  int delayInt = (int)delayInMicroS;
+
+  Serial.print("Go to deepsleep for: ");
+  Serial.println(delayInt);
+   
+  //in case of to low delay
   if(defaultDelay<10000)
   {
     Serial.print("Delay is set to low from server! Delay: ");
@@ -112,12 +118,13 @@ void setup()
   }
   else
   {
-    delay(defaultDelay*1e3); 
+    ESP.deepSleep(delayInt);
   }
 }
 
 void loop() {
-
+  Serial.println("Error! Deepsleep do not work!");
+  delay(1000);
 }
 
 //----------------FUNCTIONS-------------------
