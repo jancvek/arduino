@@ -17,4 +17,7 @@ Mapa vsebuje:
 Slika modula ESP8266 z sensorjem temperature in vlage, s kodo prilagojeno za nizko porabo:
 ![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/esp8266_onBattery.jpg)
 
+TODO:
+  - preveri ali lahko z ESP8266 modulom razširimo WiFi omrežje, na katerega se lahko potem povežejo drugi moduli in pošiljajo podatke na strežnik.
+
 To stran je bila oblikovana z [dilinger.io](https://dillinger.io/).
