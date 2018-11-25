@@ -1,11 +1,14 @@
 /*
- CODE FOR ESP8266 LoLin V3 modul WITH TEMP AND HUMIDITY SENSOR
+ CODE FOR ESP8258 ESP-M3 modul WITH TEMP AND HUMIDITY SENSOR
  CODE IS MODIFIED FOR BATTERY (DEEPSLEEP)
 
- IMPORTANT: we need to connect D0 to RST 
+ IMPORTANT: 
+ - we need to connect GPIO16 to RST,
+ - after load code to flash we need to disconect GND from GPIO0
+ 
 
  DEEPSLEEP RESET PIN:
- D0 - RST
+ GPIO16 - RST
  
  SENSOR GY-213V-HTU21D PINS:
  V3.3 - VCC
@@ -16,6 +19,7 @@
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <Wire.h>
 #include "Adafruit_Si7021.h"
 
 //-----!!!USER SETTINGS!!!--------
@@ -38,6 +42,12 @@ void setup()
   //set serial conn
   Serial.begin(115200);
 
+  // Connect GPIO16 to RST to wake up
+  pinMode(16, WAKEUP_PULLUP);
+
+  //Wire.begin(int sda, int scl)
+  Wire.begin(1, 3);
+  
   //check SI7021 sensor
   if (!sensor.begin()) {
     Serial.println("Did not find Si7021 sensor!");
@@ -114,11 +124,11 @@ void setup()
     Serial.println(defaultDelay);
 
     //sleep for minimum 10s
-    ESP.deepSleep(10000e3);
+    //ESP.deepSleep(10000e3);
   }
   else
   {
-    ESP.deepSleep(delayInt);
+    //ESP.deepSleep(delayInt);
   }
 }
 
