@@ -4,14 +4,44 @@
  NOTES:
  modul has bilt in LED on PIN 2
  */
+/*
+  See for details:  
+  https://github.com/sui77/rc-switch/
+
+  NOTES:
+  220V Swich from Lidl:
+  Workzone
+  Reciever: GT-FSI-07
+  Transiever: GT-9000
+  Frequency: 433
+
+  Signal: 24Bit, Protocol: 5, PulseLength: 511us
+
+  BUTTON # SENDS (24Bit) :
+  #1 ON: 13817968, 13667504, 14368048, 13941056
+  #1 OFF: 14327568, 14598288, 14242976, 13703968
+  #2 ON: 13667508, 13817972, 14368052, 13941060
+  #2 OFF: 14242980, 14598292, 14327572, 13703972
+  #3 ON: 13941068, 14368060, 13667516, 13817980
+  #3 OFF: 14598300, 14327580, 13703980, 14242988
+  #4 ON: 13703970, 14327570, 14598290, 14242978
+  #4 OFF: 13667506, 14368050, 13941058, 13817970
+  #1-4 ON: 13703978, 14327578, 14598298, 14242986
+  #1-4 OFF: 13667514, 14368058, 13941066, 13817978
+*/
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WebServer.h>
 
+#include <RCSwitch.h>
+
+RCSwitch mySwitch = RCSwitch();
+
 //-----!!!USER SETTINGS!!!--------
 //set modul id
-String moduleId = "2";
+String moduleId = "5";
+String deviceName = "ESP_SWICH1";
 
 //set WIFI variables
 const char* ssid = "Doma 3";
@@ -29,7 +59,22 @@ void setup()
   Serial.begin(115200);
   pinMode(ledPin, OUTPUT);
 
+  //---RF CONFIG---
+  // Transmitter is connected to ESP8266 Pin D1  
+  mySwitch.enableTransmit(5);
+  
+  // Optional set protocol (default is 1, will work for most outlets)
+  mySwitch.setProtocol(5);
+
+  // Optional set pulse length.
+   mySwitch.setPulseLength(511);
+  
+  // Optional set number of transmission repetitions.
+   mySwitch.setRepeatTransmit(5);
+
+  
   //connect to WIFI
+  WiFi.hostname(deviceName);
   WiFi.begin(ssid, password);
 
   //wait a little to WIFI begin
@@ -84,20 +129,57 @@ server.handleClient();
 
 //----------------FUNCTIONS-------------------
 
+String sendHttpReq(String httpReq)
+{
+    String payload = "";
+    
+    HTTPClient http;  //Declare an object of class HTTPClient  
+    
+    http.begin(httpReq);  //Specify request destination
+    int httpCode = http.GET();  //Send the request
+    
+    if (httpCode > 0) //Check the returning code 
+    { 
+      payload = http.getString();   //Get the request response payload 
+    }
+    
+    http.end();   //Close connection
+
+    return payload;
+}
+
 void handleRoot() {
-  digitalWrite (LED_BUILTIN, LOW); //turn the built in LED on pin DO of NodeMCU on
-  digitalWrite (ledPin, server.arg("swi").toInt());
-  ledState = digitalRead(ledPin);
+  digitalWrite (ledPin, LOW); //turn the built in LED on pin DO of NodeMCU on
+  
+  int cont = server.arg("swi").toInt();
+  
+  if(cont == 1)
+  {
+    cont = 0;
+  }
+  else if(cont == 0)
+  {
+    cont = 1;
+  }
+  else
+  {
+    cont = 0;
+  }
+  
+  digitalWrite (ledPin, cont);
+  bool ledState = digitalRead(ledPin);
 
  /* Dynamically generate the LED toggle link, based on its current state (on or off)*/
   char ledText[80];
-  
-  if (ledState) {
-    strcpy(ledText, "SWICH is ON. <a href=\"/?led=0\">Turn it OFF!</a>");
+  Serial.println(cont);
+  if (cont==1) {
+    strcpy(ledText, "SWICH is OFF. <a href=\"/?swi=1\">Turn it ON!</a>"); 
+    mySwitch.send(14242976, 24);
   }
 
   else {
-    strcpy(ledText, "SWICH is OFF. <a href=\"/?led=1\">Turn it ON!</a>");
+    strcpy(ledText, "SWICH is ON. <a href=\"/?swi=0\">Turn it OFF!</a>");
+    mySwitch.send(14368048, 24);
   }
  
   ledState = digitalRead(ledPin);
