@@ -82,7 +82,7 @@ void setup()
 
   long rssi = WiFi.RSSI();
   
-  String httpReq = "http://192.168.0.101:8000/input/?module_id="+moduleId+"&temp="+String(temp, 3)+"&humi="+String(humi, 3)+"&rssi="+String(rssi);
+  String httpReq = "http://192.168.0.102:8000/input/?module_id="+moduleId+"&temp="+String(temp, 3)+"&humi="+String(humi, 3)+"&rssi="+String(rssi);
 
   String response = sendHttpReq(httpReq);   
   

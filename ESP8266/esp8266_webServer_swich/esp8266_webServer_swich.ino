@@ -95,7 +95,7 @@ void setup()
   //ledBlink(3, 500, 200);
 
   //check connection on raspberry pi
-  String httpReq = "http://192.168.0.101:8000/checkConn/?test=%2799.9%27";
+  String httpReq = "http://192.168.0.102:8000/checkConn/?test=%2799.9%27";
 
   //send http request
   String response = sendHttpReq(httpReq);
