@@ -50,6 +50,12 @@ Več na: [Link](https://www.instructables.com/id/ESP-12F-ESP8266-Module-Minimal-
 
 Tako imamo novo kodo na esp! Če uporabljamo deepsleep NUJNO povežemo RST in GPIO16 pin, če ne se esp ne bo zbudil.
 
+Če želimo modul napajati z baterijami... TODO
+
+Ostali linki, ki sem jih rabil:
+[https://tttapa.github.io/ESP8266/Chap02%20-%20Hardware.html](https://tttapa.github.io/ESP8266/Chap02%20-%20Hardware.html)
+
+
 TODO:
   - preveri ali lahko z ESP8266 modulom razširimo WiFi omrežje, na katerega se lahko potem povežejo drugi moduli in pošiljajo podatke na strežnik,
   - preveri kako lahko na en I2C vežemo več senzorjev,
