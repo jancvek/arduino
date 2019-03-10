@@ -27,7 +27,7 @@ Potrebno, bi bilo preveriti še ali je esp8266 najboljša izbira za to ali so dr
 
 Uporabimo ESP8266-12F + adapter, ki ima raster 2.54 in 3 upore za CH_PD(high), GPIO15(low) in GPIO02(high).
 
-![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/esp8266-12F_with_adapter.jpg)
+![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/esp8266-12F_with_adapter.JPG)
 
 Najprej modul testiramo, brez da bi nanj karkoli nalagali, da preverimo če deluje pravilno. Z modulom lahko komuniciramo z AT komandami. Sledi naslednim korakom: [Link](https://www.instructables.com/id/Getting-Started-with-the-ESP8266-ESP-12/)
 
@@ -35,7 +35,7 @@ Ker adapter nima UART komunikacije moramo uporabiti USB to TTL converter.
 Polek tega pa moramo poskrbeti ob nalaganju nove kode (flash), da so izpolnjeni določeni pogoji. Več na: [link](https://www.instructables.com/id/ESP-12F-ESP8266-Module-Minimal-Breadboard-for-Flas/).
 
 Vse pogoje sem upošteval in naredil tako kot je na tej shematiki: 
-![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/esp8266_flash_shematic.jpg)
+![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/esp8266_flash_shematic.JPG)
 
 Slika testne plate:
 TODO: slika
