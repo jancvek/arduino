@@ -9,7 +9,7 @@
 #include <ESP8266WiFi.h>
 
 // Replace these with your WiFi network settings
-const char* ssid = "Doma 3"; //replace this with your WiFi network name
+const char* ssid = "Doma Zgoraj"; //replace this with your WiFi network name
 const char* password = "a1250283"; //replace this with your WiFi network password
 
 void setup() {

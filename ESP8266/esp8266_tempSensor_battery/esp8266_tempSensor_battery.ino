@@ -5,13 +5,13 @@
  IMPORTANT: we need to connect D0 to RST 
 
  DEEPSLEEP RESET PIN:
- D0 - RST
+ GPIO16 (D0) - RST
  
  SENSOR GY-213V-HTU21D PINS:
  V3.3 - VCC
  G - GND
- D1 - SCL
- D2 - SDA
+ GPIO5 (D1) - SCL
+ GPIO4 (D2) - SDA
  */
 
 #include <ESP8266WiFi.h>
@@ -26,7 +26,7 @@ String moduleId = "4";
 int defaultDelay = 900000;
 
 //set WIFI variables
-const char* ssid = "Doma 3";
+const char* ssid = "Doma Zgoraj";
 const char* password = "a1250283";
 //------------END--------------
 
