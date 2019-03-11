@@ -38,7 +38,10 @@ Vse pogoje sem upošteval in naredil tako kot je na tej shematiki:
 ![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/esp8266_flash_shematic.JPG)
 
 Slika testne plate:
-TODO: slika
+![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash.JPG)
+
+Še skupaj z esp modulom:
+![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash_esp.JPG)
 
 Postopek nalaganje nove kode:
 1. vpni platko z esp in vtakni usb v pc (glej da je črna žica-GPIO02 vpeta na GND in zelena-RESET ni vključena v GND!)
@@ -50,7 +53,27 @@ Več na: [Link](https://www.instructables.com/id/ESP-12F-ESP8266-Module-Minimal-
 
 Tako imamo novo kodo na esp! Če uporabljamo deepsleep NUJNO povežemo RST in GPIO16 pin, če ne se esp ne bo zbudil.
 
-Če želimo modul napajati z baterijami... TODO
+## Napajanje z baterijo
+
+Zaradi nizke porabe lahko barebone esp napajamo z baterijami. Z 2xAAA alkalnimi baterijami, ki imajo okoli 800mAh lahko napajamo modul več kot leto dni.
+
+#### Izmerjena dejanska poraba:
+Poraba v delovanju: **70 mA**
+Poraba v deepsleep: **17 uA**
+
+#### Delovanje na 3.3V
+
+Modul deluje on MAX **3.6V** in MIN **2.6V**.
+
+Alkalne baterije pa imajo napetost od 1.5V (napolnjena) do 0.9V (prazna). To pomeni, da imamo razpon pri **2** x alkalne: **3.0-1.8V** in pri **3** x alkalne: **4.5-2.7V**.
+
+Vidimo, da bomo potrebovali step-up regulator, ki pa bo moral imeti dober izkoristek oz malo porabo. Največkrat sem zasledil naslednjega [Pololu 3.3V](https://www.pololu.com/product/2561), vendar ga v EU ni moč kupiti tudi na na ebay ne. Našel sem alternativo [DC-DC 1V 1.2V 1.5V 1.8V 2.5V 3V to DC 3.3V Step-UP Boost Power Supply Converter](https://www.ebay.com/itm/DC-DC-1V-1-2V-1-5V-1-8V-2-5V-3V-to-DC-3-3V-Step-UP-Boost-Power-Supply-Converter/401408562844?ssPageName=STRK%3AMEBIDX%3AIT&_trksid=p2057872.m2749.l2649).
+
+Na tem [linku](https://iot-playground.com/blog/2-uncategorised/7-low-power-sensor-and-step-up-regulator) sem našel test regulatorja kjer je navedena učinkovitost z grafom: 
+
+![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/step_up_efficiency_graph.JPG)
+
+Omenjen regulator pokriva območje od **1.1-3.3V**, kar je je ravno prav za 2xalcaline baterije.
 
 Ostali linki, ki sem jih rabil:
 [https://tttapa.github.io/ESP8266/Chap02%20-%20Hardware.html](https://tttapa.github.io/ESP8266/Chap02%20-%20Hardware.html)
