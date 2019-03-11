@@ -38,9 +38,11 @@ Vse pogoje sem upošteval in naredil tako kot je na tej shematiki:
 ![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/esp8266_flash_shematic.JPG)
 
 Slika testne plate:
+
 ![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash.JPG)
 
 Še skupaj z esp modulom:
+
 ![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash_esp_1.JPG)
 
 Postopek nalaganje nove kode:
