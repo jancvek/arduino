@@ -53,6 +53,8 @@ Več na: [Link](https://www.instructables.com/id/ESP-12F-ESP8266-Module-Minimal-
 
 Tako imamo novo kodo na esp! Če uporabljamo deepsleep NUJNO povežemo RST in GPIO16 pin, če ne se esp ne bo zbudil.
 
+Če želimo platko le testirati in gledati serial podatke na portu moramo GPIO02 pin nastaviti na high, kar pomeni da črno žico iztaknemo iz GND.
+
 ## Napajanje z baterijo
 
 Zaradi nizke porabe lahko barebone esp napajamo z baterijami. Z 2xAAA alkalnimi baterijami, ki imajo okoli 800mAh lahko napajamo modul več kot leto dni.
