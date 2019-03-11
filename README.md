@@ -41,7 +41,7 @@ Slika testne plate:
 ![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash.JPG)
 
 Še skupaj z esp modulom:
-![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash_esp.JPG)
+![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash_esp_1.JPG)
 
 Postopek nalaganje nove kode:
 1. vpni platko z esp in vtakni usb v pc (glej da je črna žica-GPIO02 vpeta na GND in zelena-RESET ni vključena v GND!)
