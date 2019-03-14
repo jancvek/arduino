@@ -38,10 +38,12 @@ Vse pogoje sem upošteval in naredil tako kot je na tej shematiki:
 ![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/esp8266_flash_shematic.JPG)
 
 Slika testne plate:
+
 ![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash.JPG)
 
 Še skupaj z esp modulom:
-![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash_esp.JPG)
+
+![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/test_bard_for_flash_esp_1.JPG)
 
 Postopek nalaganje nove kode:
 1. vpni platko z esp in vtakni usb v pc (glej da je črna žica-GPIO02 vpeta na GND in zelena-RESET ni vključena v GND!)
@@ -52,6 +54,8 @@ Postopek nalaganje nove kode:
 Več na: [Link](https://www.instructables.com/id/ESP-12F-ESP8266-Module-Minimal-Breadboard-for-Flas/) (v nekaterih navodilih piše da je potrebno izključiti tudi žico GPIO02 takoj po resetu, pa ta korak lahko spustimo!)
 
 Tako imamo novo kodo na esp! Če uporabljamo deepsleep NUJNO povežemo RST in GPIO16 pin, če ne se esp ne bo zbudil.
+
+Če želimo platko le testirati in gledati serial podatke na portu moramo GPIO02 pin nastaviti na high, kar pomeni da črno žico iztaknemo iz GND.
 
 ## Napajanje z baterijo
 
