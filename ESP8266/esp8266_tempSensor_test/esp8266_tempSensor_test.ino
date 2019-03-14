@@ -18,7 +18,11 @@ void setup()
 {
   //set serial conn
   Serial.begin(115200);
-
+  
+  //use GPIO13 as VCC for sensor
+  pinMode(21, OUTPUT);
+  digitalWrite(21, HIGH); 
+  
   //check SI7021 sensor
   if (!sensor.begin()) {
     Serial.println("Did not find Si7021 sensor!");

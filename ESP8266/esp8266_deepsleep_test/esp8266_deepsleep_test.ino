@@ -11,6 +11,7 @@ void setup() {
 
   Serial.begin(115200);
   pinMode(ledPin, OUTPUT);
+  
   WiFi.begin(ssid, password);
 
   // Wait for serial to initialize.
