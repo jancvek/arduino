@@ -25,7 +25,12 @@ Potrebno, bi bilo preveriti še ali je esp8266 najboljša izbira za to ali so dr
 
 # ESP8266 - barebone
 
-Uporabimo ESP8266-12F + adapter, ki ima raster 2.54 in 3 upore za CH_PD(high), GPIO15(low) in GPIO02(high).
+Uporabimo ESP8266-12F + adapter, ki ima raster 2.54 in 3 upore. Preko 2 uporov (10 kOhm) so povezani trije pini: 
+CH_PD(high), 
+GPIO15(low) in 
+GPIO02(high).
+
+Tretji upor je namenjen dodatnemu napajanju na zadnji strani.
 
 ![alt text](https://raw.githubusercontent.com/jancvek/arduino/master/pic/esp8266-12F_with_adapter.JPG)
 
