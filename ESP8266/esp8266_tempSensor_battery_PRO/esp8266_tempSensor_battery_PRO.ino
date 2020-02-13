@@ -20,10 +20,10 @@
 
 //-----!!!USER SETTINGS!!!--------
 //set modul id
-String moduleId = "1";
+String moduleId = "2";
 
-//set default delay (5min)
-int defaultDelay = 300000;
+//set default delay (10min)
+int defaultDelay = 600000;
 
 //set WIFI variables
 const char* ssid = "Doma Zgoraj";
